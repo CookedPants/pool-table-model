@@ -1,4 +1,5 @@
 #include <GL/glut.h>
+#include <stdio.h>
 #include <cmath>
 
 // The table dimensions and ball size
@@ -40,7 +41,7 @@ GLfloat stripes[][3] =
 // Functions to draw solid and striped balls
 void drawSolidBall(float x, float y, int number, float radius)
 {
-        float heightOffset = 0.2;
+        float heightOffset = 0.1;
         glColor3fv(solids[number - 1]);
         glPushMatrix();
         glTranslatef(x, y, heightOffset);
@@ -49,21 +50,43 @@ void drawSolidBall(float x, float y, int number, float radius)
 }
 void drawStripedBall(float x, float y, int number, float radius)
 {
-        float heightOffset = 0.2;
-        // Draw the main part of the ball in white also doesn't work
-        glColor3fv(white);
-        glPushMatrix();
-        glTranslatef(x, y, heightOffset);
-        glutSolidSphere(radius, 20, 20);
-        glPopMatrix();
+        int lats = 20;
+        int longs = 20;
+        float heightOffset = 0.1;
+        int i, j;
+        for(i = 0; i <= lats; i++)
+        {
+                float lat0 = M_PI * (-0.5 + (float) (i - 1) / lats);
+                float z0  = sin(lat0);
+                float zr0 =  cos(lat0);
 
-        // Draw the colored stripe doesn't fully work yet
-        glColor3fv(stripes[number - 9]);
-        glPushMatrix();
-        glTranslatef(x, y, heightOffset);
-        glScalef(1.0, 0.3, 1.0);
-        glutSolidSphere(radius, 20, 20);
-        glPopMatrix();
+                float lat1 = M_PI * (-0.5 + (float) i / lats);
+                float z1 = sin(lat1);
+                float zr1 = cos(lat1);
+
+                glBegin(GL_TRIANGLE_STRIP);
+                for(j = 0; j <= longs; j++)
+                {
+                        float lng = 2 * M_PI * (float) (j - 1) / longs;
+                        float x1 = cos(lng);
+                        float y1 = sin(lng);
+
+                        // Set color depending on the latitude to create a stripe
+                        if (i > lats/2 - 2 && i < lats/2 + 2)
+                        {
+                                glColor3fv(stripes[number - 9]); // Stripe color
+                        }
+                        else
+                        {
+                                glColor3fv(white); // Main color
+                        }
+                        glNormal3f(x1 * zr0, y1 * zr0, z0);
+                        glVertex3f(x + x1 * zr0 * radius, y + y1 * zr0 * radius, heightOffset + z0 * radius);
+                        glNormal3f(x1 * zr1, y1 * zr1, z1);
+                        glVertex3f(x + x1 * zr1 * radius, y + y1 * zr1 * radius, heightOffset + z1 * radius);
+                }
+                glEnd();
+        }
 }
 // Function to draw pool balls in the correct arrangement ???
 void drawPoolBalls()
@@ -72,6 +95,7 @@ void drawPoolBalls()
         float startY = 0.0;
         float offsetX = 0.0;
         float offsetY = 0.0;
+        //float z = 0.2;
         float spacing = 2 * ballRadius * sqrt(3);
 
         // Draw the cue ball
@@ -124,30 +148,56 @@ void drawQuarterCircle(float radius, float depth)
         }
         glEnd();
 }
+// Draws half circle for middle pockets
+void drawHalfCircle(float radius)
+{
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex3f(0.0, 0.0, 0.0);  // Center point at surface level
+        for (int i = 0; i <= 180; ++i)
+        {
+                float theta = i * (M_PI / 180.0);
+                glVertex3f(radius * cos(theta), radius * sin(theta), 0.0);
+        }
+        glEnd();
+}
 void drawPockets(float radius, float depth)
 {
         glColor3f(0.0, 0.0, 0.0);
-        // Define offsets and rotation for each corner
         struct Pocket
         {
-                float x, y; // Position offsets
+                float x, y;  // Position offsets
                 float angle; // Rotation angle
         };
         // Pockets with correct positioning and rotations
         Pocket pockets[4] =
         {
 
-                {-1, 1, 270},   // Top left corner, rotate 270 degrees
-                {1, 1, 180},      // Top right corner, rotate 180 degrees
-                {1, -1, 90},    // Bottom right corner, rotate 90 degrees
-                {-1, -1, 0}   // Bottom left corner, rotate 0 degrees
+                {-1.2, 1.08, 270},      // Top left corner, rotate 270 degrees
+                {1.2, 1.08, 180},       // Top right corner, rotate 180 degrees
+                {1.2, -1.08, 90},       // Bottom right corner, rotate 90 degrees
+                {-1.2, -1.08, 0}        // Bottom left corner, rotate 0 degrees
         };
         for (const auto& pocket : pockets)
         {
                 glPushMatrix();
                 glTranslatef(pocket.x * (tableWidth / 2 - radius), pocket.y * (tableHeight / 2 - radius), 0);
+
                 glRotatef(pocket.angle, 0.0, 0.0, 1.0);
-                drawQuarterCircle(radius, depth);
+                drawQuarterCircle(radius, 0.05);
+                glPopMatrix();
+        }
+}
+void drawSidePockets(float radius)
+{
+        glColor3f(0.0f, 0.0f, 0.0f); // Black color for pockets
+        float xPositions[2] = {-(tableWidth / 2 - radius * -0.2), tableWidth / 2 - radius * -0.2};
+        //float xPositions[2] = {-tableWidth / 2 + radius, tableWidth / 2 - radius};
+        for (int i = 0; i < 2; ++i)
+        {
+                glPushMatrix();
+                glTranslatef(xPositions[i], 0, 0.01);
+                glRotatef(i == 0 ? 270 : 90, 0.0, 0.0, 1.0);
+                drawHalfCircle(radius);
                 glPopMatrix();
         }
 }
@@ -202,9 +252,10 @@ void drawTable()
         glVertex3f(tableWidth / 2, tableHeight / 2, 0.0);
         glVertex3f(tableWidth / 2, -tableHeight / 2, 0.0);
         glEnd();
-
-        // Draws the pockets
+        // Draws all of the pockets
         drawPockets(holeRadius, holeDepth);
+        drawSidePockets(0.15);
+
         // Draws the table legs
         glPushMatrix();
         glTranslatef(-tableWidth / 2 + 0.1, -tableHeight / 2 + 0.1, -tableHeight);
