@@ -364,6 +364,9 @@ void init()
         glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
         glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
         glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+
+        glEnable(GL_COLOR_MATERIAL);
+        glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 }
 
 int main(int argc, char** argv)
