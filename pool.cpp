@@ -71,7 +71,7 @@ void drawStripedBall(float x, float y, int number, float radius)
                         float x1 = cos(lng);
                         float y1 = sin(lng);
 
-                        // Set color depending on the latitude to create a stripe
+                        // Sets color depending on the latitude to create a stripe
                         if (i > lats/2 - 2 && i < lats/2 + 2)
                         {
                                 glColor3fv(stripes[number - 9]); // Stripe color
@@ -152,7 +152,7 @@ void drawQuarterCircle(float radius, float depth)
 void drawHalfCircle(float radius)
 {
         glBegin(GL_TRIANGLE_FAN);
-        glVertex3f(0.0, 0.0, 0.0);  // Center point at surface level
+        glVertex3f(0.0, 0.0, 0.0);  
         for (int i = 0; i <= 180; ++i)
         {
                 float theta = i * (M_PI / 180.0);
@@ -277,6 +277,22 @@ void drawTable()
         drawTableLeg();
         glPopMatrix();
 }
+// Function to draw the cue stick
+void drawCueStick(float x, float y, float angle, float length, GLfloat color1[3], GLfloat color2[3])
+{
+        glPushMatrix();
+        glTranslatef(x, y, -1.3);     
+        glRotatef(angle, 0, 0, 1);
+
+        GLUquadric* quadric = gluNewQuadric();
+        glColor3fv(color1);
+        gluCylinder(quadric, 0.02, 0.02, length / 2, 32, 32);
+        
+        glTranslatef(0, 0, length / 2);
+        glColor3fv(color2);
+        gluCylinder(quadric, 0.02, 0.02, length / 2, 32, 32);
+        glPopMatrix();
+}
 void drawScene()
 {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -295,8 +311,14 @@ void drawScene()
         }
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+        
         drawTable();
         drawPoolBalls();
+        GLfloat white[] = {1.0, 1.0, 1.0};
+        GLfloat black[] = {0.0, 0.0, 0.0};
+        drawCueStick(-1.0, 2.0, 45, tableHeight, white, black);
+        drawCueStick(1.0, -2.0, -45, tableHeight, white, black);
+        
         glutSwapBuffers();
 }
 void keyboard(unsigned char key, int x, int y)
@@ -325,7 +347,25 @@ void init()
 {
         glClearColor(1.0, 1.0, 1.0, 1.0); // White background color
         glEnable(GL_DEPTH_TEST);
+
+        // Enable lighting
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+
+        // Light position
+        GLfloat lightPos[] = {0.0, 0.0, 3.0, 1.0}; 
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+
+        // Ambient, diffuse and specular lighting
+        GLfloat ambientLight[] = {0.2, 0.2, 0.2, 1.0};
+        GLfloat diffuseLight[] = {0.8, 0.8, 0.8, 1.0};
+        GLfloat specularLight[] = {1.0, 1.0, 1.0, 1.0};
+
+        glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
 }
+
 int main(int argc, char** argv)
 {
         glutInit(&argc, argv);
