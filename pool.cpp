@@ -7,12 +7,23 @@ float tableWidth = 2.0;
 float tableHeight = 4.0;
 float tableDepth = 0.3;
 float ballRadius = 0.08;
+float holeRadius = 0.08; 
 int numBalls = 16;
 
 // Camera settings for the view
 float cameraAngleX = -60.0; // balls kept appearing on the wrong side, so made it negative
 float cameraHeight = 6.5;
 bool is2D = false;
+
+typedef struct 
+{
+        float x, y;        // Position
+        float vx, vy;      // Velocity
+        bool visible;      // Visibility
+} Ball;
+
+Ball balls[16]; 
+bool animationActive = false;  
 
 // Colors definitions for balls
 GLfloat white[] = {1.0, 1.0, 1.0};
@@ -37,7 +48,37 @@ GLfloat stripes[][3] =
         {0.0, 0.2, 0.13},  // 14, Dark Green
         {0.5, 0.0, 0.0}    // 15, Maroon
 };
+// Improved Lighting Setup
+void setupLights() 
+{
+	glEnable(GL_LIGHTING);
+    	glEnable(GL_LIGHT0);
+    	glEnable(GL_LIGHT1);
 
+    	// Primary light
+    	GLfloat light0_position[] = {0.0, 5.0, 5.0, 1.0};
+    	GLfloat light0_diffuse[] = {0.8, 0.8, 0.8, 1.0};  // Bright white light
+    	glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
+    	glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
+
+    	// Secondary ambient light for softer shadows
+    	GLfloat light1_position[] = {-5.0, 5.0, 5.0, 1.0};
+    	GLfloat light1_diffuse[] = {0.5, 0.5, 0.5, 1.0};  // Dimmer white light
+    	glLightfv(GL_LIGHT1, GL_POSITION, light1_position);
+    	glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
+
+    	// General ambient light
+    	GLfloat ambientLight[] = {0.2, 0.2, 0.2, 1.0};
+    	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientLight);
+}
+// Material Properties for the balls
+void setBallMaterialProperties() 
+{
+	GLfloat material_specular[] = {0.5, 0.5, 0.5, 1.0};
+    	GLfloat material_shininess[] = {50.0};
+    	glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular);
+    	glMaterialfv(GL_FRONT, GL_SHININESS, material_shininess);
+}
 // Functions to draw solid and striped balls
 void drawSolidBall(float x, float y, int number, float radius)
 {
@@ -45,7 +86,8 @@ void drawSolidBall(float x, float y, int number, float radius)
         glColor3fv(solids[number - 1]);
         glPushMatrix();
         glTranslatef(x, y, heightOffset);
-        glutSolidSphere(radius, 20, 20);
+        setBallMaterialProperties();  // Set material properties for reflective light
+	glutSolidSphere(radius, 20, 20);
         glPopMatrix();
 }
 void drawStripedBall(float x, float y, int number, float radius)
@@ -54,7 +96,9 @@ void drawStripedBall(float x, float y, int number, float radius)
         int longs = 20;
         float heightOffset = 0.1;
         int i, j;
-        for(i = 0; i <= lats; i++)
+        setBallMaterialProperties();  // Set material properties for reflective light
+
+	for(i = 0; i <= lats; i++)
         {
                 float lat0 = M_PI * (-0.5 + (float) (i - 1) / lats);
                 float z0  = sin(lat0);
@@ -88,53 +132,30 @@ void drawStripedBall(float x, float y, int number, float radius)
                 glEnd();
         }
 }
-// Function to draw pool balls in the correct arrangement ???
 void drawPoolBalls()
 {
-        float startX = 0.0;
-        float startY = 0.0;
-        float offsetX = 0.0;
-        float offsetY = 0.0;
-        //float z = 0.2;
-        float spacing = 2 * ballRadius * sqrt(3);
-
-        // Draw the cue ball
-        glColor3fv(white);
-        glPushMatrix();
-        glTranslatef(startX, startY - 3 * spacing, 0.2); // Place the cue ball in the front
-        glutSolidSphere(ballRadius, 20, 20);
-        glPopMatrix();
-
-        int solidIndex = 0, stripeIndex = 0;
-        for (int row = 0; row < 5; ++row)
+    for (int i = 0; i < numBalls; ++i)
+    {
+        if (balls[i].visible)
         {
-
-                for (int col = 0; col <= row; ++col)
-                {
-
-                        float x = startX + offsetX + col * spacing;
-                        float y = startY + offsetY;
-
-                        if (row == 2 && col == 1)
-                        {
-                                // Draw the 8-ball at th
-                                drawSolidBall(x, y, 8, ballRadius);
-                        }
-                        else if ((row + col) % 2 == 0 && solidIndex < 7)
-                        {
-                                // Alternate stripes and solids except the 8-ball
-                                drawSolidBall(x, y, solidIndex + 1, ballRadius);
-                                solidIndex++;
-                        }
-                        else if (stripeIndex < 7)
-                        {
-                                drawStripedBall(x, y, stripeIndex + 9, ballRadius);
-                                stripeIndex++;
-                        }
-                }
-                offsetX -= spacing / 2;
-                offsetY += spacing;
+            if (i == 0) // Cue ball
+            {
+                glColor3fv(white);
+                glPushMatrix();
+                glTranslatef(balls[i].x, balls[i].y, 0.1);
+                glutSolidSphere(ballRadius, 20, 20);
+                glPopMatrix();
+            }
+            else if (i == 5 || (i >= 11 && i <= 15)) // Striped balls
+            {
+                drawStripedBall(balls[i].x, balls[i].y, i, ballRadius);
+            }
+            else // Solid balls
+            {
+                drawSolidBall(balls[i].x, balls[i].y, i, ballRadius);
+            }
         }
+    }
 }
 // Draws a quarter circle for pockets
 void drawQuarterCircle(float radius, float depth)
@@ -160,15 +181,15 @@ void drawHalfCircle(float radius)
         }
         glEnd();
 }
+// Draws the pockets
 void drawPockets(float radius, float depth)
 {
         glColor3f(0.0, 0.0, 0.0);
         struct Pocket
         {
-                float x, y;  // Position offsets
-                float angle; // Rotation angle
+                float x, y;  
+                float angle; 
         };
-        // Pockets with correct positioning and rotations
         Pocket pockets[4] =
         {
 
@@ -187,11 +208,11 @@ void drawPockets(float radius, float depth)
                 glPopMatrix();
         }
 }
+// Draws the middle pockets, had to split them up
 void drawSidePockets(float radius)
 {
-        glColor3f(0.0f, 0.0f, 0.0f); // Black color for pockets
+        glColor3f(0.0, 0.0, 0.0); // Black color for pockets
         float xPositions[2] = {-(tableWidth / 2 - radius * -0.2), tableWidth / 2 - radius * -0.2};
-        //float xPositions[2] = {-tableWidth / 2 + radius, tableWidth / 2 - radius};
         for (int i = 0; i < 2; ++i)
         {
                 glPushMatrix();
@@ -201,12 +222,14 @@ void drawSidePockets(float radius)
                 glPopMatrix();
         }
 }
+// Draws the legs
 void drawTableLeg()
 {
         glColor3f(0.5, 0.35, 0.05);
         GLUquadric* quadric = gluNewQuadric();
         gluCylinder(quadric, 0.1, 0.1, tableHeight, 32, 32);
 }
+// Draws the table surface, with walls, all the pockets, and table legs
 void drawTable()
 {
         float cushionHeight = 0.2;
@@ -252,6 +275,7 @@ void drawTable()
         glVertex3f(tableWidth / 2, tableHeight / 2, 0.0);
         glVertex3f(tableWidth / 2, -tableHeight / 2, 0.0);
         glEnd();
+
         // Draws all of the pockets
         drawPockets(holeRadius, holeDepth);
         drawSidePockets(0.15);
@@ -293,6 +317,7 @@ void drawCueStick(float x, float y, float angle, float length, GLfloat color1[3]
         gluCylinder(quadric, 0.02, 0.02, length / 2, 32, 32);
         glPopMatrix();
 }
+// Sets up scene, allows for a change of perspective
 void drawScene()
 {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -321,6 +346,134 @@ void drawScene()
         
         glutSwapBuffers();
 }
+// Based on real life setup
+void initBalls()
+{
+	// Ball positioning constants
+    	float startX = 0.0;
+    	float startY = 0.0;
+    	float spacingX = 2 * ballRadius;  
+    	float spacingY = sqrt(3) * ballRadius;
+
+    	// Row 1
+    	balls[1] = (Ball){startX, startY, 0.0, 0.0, true}; // Yellow solid
+
+    	// Row 2
+    	balls[2] = (Ball){startX - spacingX / 2, startY + spacingY, 0.0, 0.0, true}; // Blue solid
+    	balls[3] = (Ball){startX + spacingX / 2, startY + spacingY, 0.0, 0.0, true}; // Stripe brown
+
+    	// Row 3
+    	balls[4] = (Ball){startX - spacingX, startY + 2 * spacingY, 0.0, 0.0, true}; // Orange solid
+    	balls[5] = (Ball){startX, startY + 2 * spacingY, 0.0, 0.0, true}; // Black ball
+    	balls[6] = (Ball){startX + spacingX, startY + 2 * spacingY, 0.0, 0.0, true}; // Striped blue
+
+    	// Row 4
+    	balls[7] = (Ball){startX - 1.5 * spacingX, startY + 3 * spacingY, 0.0, 0.0, true}; // Solid purple
+    	balls[8] = (Ball){startX - 0.5 * spacingX, startY + 3 * spacingY, 0.0, 0.0, true}; // Solid brown
+    	balls[9] = (Ball){startX + 0.5 * spacingX, startY + 3 * spacingY, 0.0, 0.0, true}; // Stripe yellow
+    	balls[10] = (Ball){startX + 1.5 * spacingX, startY + 3 * spacingY, 0.0, 0.0, true}; // Solid green
+
+    	// Row 5
+    	balls[11] = (Ball){startX - 2 * spacingX, startY + 4 * spacingY, 0.0, 0.0, true}; // Stripe Green
+    	balls[12] = (Ball){startX - spacingX, startY + 4 * spacingY, 0.0, 0.0, true}; // Stripe Purple
+    	balls[13] = (Ball){startX, startY + 4 * spacingY, 0.0, 0.0, true}; // Striped maroon
+    	balls[14] = (Ball){startX + spacingX, startY + 4 * spacingY, 0.0, 0.0, true}; // Striped orange
+    	balls[15] = (Ball){startX + 2 * spacingX, startY + 4 * spacingY, 0.0, 0.0, true}; // Solid maroon
+
+    	// Cue ball setup
+    	balls[0] = (Ball){0, startY - 4 * spacingY, 0.0, 0.0, true}; // Cue ball
+}
+// Based on slow downed video of shot, and an attempt to recreate the movemen
+void setInitialVelocities() 
+{
+	for (int i = 0; i < numBalls; ++i) 
+	{
+        	balls[i].vx = 0;
+        	balls[i].vy = 0;
+    	}
+    	balls[0].vy = 0.2;  
+    	balls[1].vx = 0.05; balls[1].vy = -0.03; 
+    	balls[13].vx = 0.01; balls[13].vy = -0.02; 
+    	balls[9].vy = -0.05; 
+    	balls[2].vx = 0.04; balls[2].vy = 0.03; 
+    	balls[5].vx = 0.04; balls[5].vy = 0.03; 
+    	balls[10].vx = -0.03; balls[10].vy = 0.04; 
+    	balls[4].vx = -0.07; balls[4].vy = 0.07; 
+    	balls[12].vx = 0.07; balls[12].vy = 0.07; 
+    	balls[3].vx = -0.05; balls[3].vy = 0.01; 
+    	balls[7].vx = 0.02; balls[7].vy = 0.04; 
+    	balls[11].vx = 0.01; balls[11].vy = 0.03; 
+}
+void updateBallPositions()
+{
+    const float wallLeft = -tableWidth / 2 + ballRadius;
+    const float wallRight = tableWidth / 2 - ballRadius;
+    const float wallTop = tableHeight / 2 - ballRadius;
+    const float wallBottom = -tableHeight / 2 + ballRadius;
+    for (int i = 0; i < numBalls; i++)
+    {
+        if (balls[i].visible)
+        {
+            float nextX = balls[i].x + balls[i].vx;
+            float nextY = balls[i].y + balls[i].vy;
+
+            // Horizontal collision detection
+            if (nextX < wallLeft)
+            {
+                balls[i].x = wallLeft; // Reset position to wall edge
+                balls[i].vx = 0; // Stop horizontal movement
+                if (i == 1 || i == 7) // Specific balls that disappear at left wall
+                {
+                    balls[i].visible = false;
+                }
+            }
+            else if (nextX > wallRight)
+            {
+                balls[i].x = wallRight; // Reset position to wall edge
+                balls[i].vx = 0; // Stop horizontal movement
+                if (i == 4 || i == 12) // Specific balls that disappear at right wall
+                {
+                    balls[i].visible = false;
+                }
+            }
+            else
+            {
+                balls[i].x = nextX; // Update position normally
+            }
+            // Vertical collision detection
+            if (nextY < wallBottom)
+            {
+                balls[i].y = wallBottom; // Reset position to wall edge
+                balls[i].vy = 0; // Stop vertical movement
+                if (i == 10 || i == 14) // Specific balls that disappear at bottom wall
+                {
+                    balls[i].visible = false;
+                }
+            }
+            else if (nextY > wallTop)
+            {
+                balls[i].y = wallTop; // Reset position to wall edge
+                balls[i].vy = 0; // Stop vertical movement
+                if (i == 3 || i == 15) // Specific balls that disappear at top wall
+                {
+                    balls[i].visible = false;
+                }
+            }
+            else
+            {
+                balls[i].y = nextY; // Update position normally
+            }
+        }
+    }
+}
+void idleFunction() 
+{
+	if (animationActive) 
+	{
+        	updateBallPositions();
+        	glutPostRedisplay(); // Ensures the display is refreshed
+    	}
+}
 void keyboard(unsigned char key, int x, int y)
 {
         switch (key)
@@ -340,41 +493,36 @@ void keyboard(unsigned char key, int x, int y)
                 case 27:
                         exit(0);
                         break;
-        }
+		case ' ':
+            		if (!animationActive) 
+			{
+				setInitialVelocities();
+                		animationActive = true;
+            		}
+            		break;
+        	case 'r':
+            		initBalls();
+            		animationActive = false;
+            		break;
+	}
         glutPostRedisplay();
 }
 void init()
 {
-        glClearColor(1.0, 1.0, 1.0, 1.0); // White background color
+        glClearColor(0.2, 0.2, 0.2, 1.0); // Grey background color
         glEnable(GL_DEPTH_TEST);
-
-        // Enable lighting
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
-
-        // Light position
-        GLfloat lightPos[] = {0.0, 0.0, 3.0, 1.0}; 
-        glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-
-        // Ambient, diffuse and specular lighting
-        GLfloat ambientLight[] = {0.2, 0.2, 0.2, 1.0};
-        GLfloat diffuseLight[] = {0.8, 0.8, 0.8, 1.0};
-        GLfloat specularLight[] = {1.0, 1.0, 1.0, 1.0};
-
-        glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
-
+	setupLights();  // Setup enhanced lighting
+	initBalls();
         glEnable(GL_COLOR_MATERIAL);
         glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 }
-
 int main(int argc, char** argv)
 {
         glutInit(&argc, argv);
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
         glutInitWindowSize(800, 600);
-        glutCreateWindow("3D/2D Pool Table");
+        glutIdleFunc(idleFunction);
+	glutCreateWindow("3D/2D Pool Table");
         init();
         glutDisplayFunc(drawScene);
         glutKeyboardFunc(keyboard);
