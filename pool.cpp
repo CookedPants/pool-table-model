@@ -48,7 +48,7 @@ GLfloat stripes[][3] =
         {0.0, 0.2, 0.13},  // 14, Dark Green
         {0.5, 0.0, 0.0}    // 15, Maroon
 };
-// Improved Lighting Setup
+// Lighting Setup
 void setupLights() 
 {
 	glEnable(GL_LIGHTING);
@@ -317,7 +317,7 @@ void drawCueStick(float x, float y, float angle, float length, GLfloat color1[3]
         gluCylinder(quadric, 0.02, 0.02, length / 2, 32, 32);
         glPopMatrix();
 }
-// Sets up scene, allows for a change of perspective
+// Sets up the scene, allows for a change of perspective
 void drawScene()
 {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -354,7 +354,7 @@ void initBalls()
     	float startY = 0.0;
     	float spacingX = 2 * ballRadius;  
     	float spacingY = sqrt(3) * ballRadius;
-
+	// For Triangle Shape pattern
     	// Row 1
     	balls[1] = (Ball){startX, startY, 0.0, 0.0, true}; // Yellow solid
 
@@ -404,6 +404,7 @@ void setInitialVelocities()
     	balls[7].vx = 0.02; balls[7].vy = 0.04; 
     	balls[11].vx = 0.01; balls[11].vy = 0.03; 
 }
+// An attempt of making the balls move according to physics
 void updateBallPositions()
 {
     const float wallLeft = -tableWidth / 2 + ballRadius;
@@ -420,48 +421,48 @@ void updateBallPositions()
             // Horizontal collision detection
             if (nextX < wallLeft)
             {
-                balls[i].x = wallLeft; // Reset position to wall edge
-                balls[i].vx = 0; // Stop horizontal movement
-                if (i == 1 || i == 7) // Specific balls that disappear at left wall
+                balls[i].x = wallLeft; 
+                balls[i].vx = 0; 
+                if (i == 1 || i == 7) 
                 {
                     balls[i].visible = false;
                 }
             }
             else if (nextX > wallRight)
             {
-                balls[i].x = wallRight; // Reset position to wall edge
-                balls[i].vx = 0; // Stop horizontal movement
-                if (i == 4 || i == 12) // Specific balls that disappear at right wall
+                balls[i].x = wallRight; 
+                balls[i].vx = 0; 
+                if (i == 4 || i == 12) 
                 {
                     balls[i].visible = false;
                 }
             }
             else
             {
-                balls[i].x = nextX; // Update position normally
+                balls[i].x = nextX; /
             }
             // Vertical collision detection
             if (nextY < wallBottom)
             {
-                balls[i].y = wallBottom; // Reset position to wall edge
-                balls[i].vy = 0; // Stop vertical movement
-                if (i == 10 || i == 14) // Specific balls that disappear at bottom wall
+                balls[i].y = wallBottom; 
+                balls[i].vy = 0; 
+                if (i == 10 || i == 14) 
                 {
                     balls[i].visible = false;
                 }
             }
             else if (nextY > wallTop)
             {
-                balls[i].y = wallTop; // Reset position to wall edge
-                balls[i].vy = 0; // Stop vertical movement
-                if (i == 3 || i == 15) // Specific balls that disappear at top wall
+                balls[i].y = wallTop;
+                balls[i].vy = 0; 
+                if (i == 3 || i == 15) 
                 {
                     balls[i].visible = false;
                 }
             }
             else
             {
-                balls[i].y = nextY; // Update position normally
+                balls[i].y = nextY; 
             }
         }
     }
@@ -471,7 +472,7 @@ void idleFunction()
 	if (animationActive) 
 	{
         	updateBallPositions();
-        	glutPostRedisplay(); // Ensures the display is refreshed
+        	glutPostRedisplay();   // Ensures the display is refreshed
     	}
 }
 void keyboard(unsigned char key, int x, int y)
@@ -493,14 +494,14 @@ void keyboard(unsigned char key, int x, int y)
                 case 27:
                         exit(0);
                         break;
-		case ' ':
+		case ' ': // Starts animation
             		if (!animationActive) 
 			{
 				setInitialVelocities();
                 		animationActive = true;
             		}
             		break;
-        	case 'r':
+        	case 'r': // Resets it
             		initBalls();
             		animationActive = false;
             		break;
@@ -511,7 +512,7 @@ void init()
 {
         glClearColor(0.2, 0.2, 0.2, 1.0); // Grey background color
         glEnable(GL_DEPTH_TEST);
-	setupLights();  // Setup enhanced lighting
+	setupLights();  
 	initBalls();
         glEnable(GL_COLOR_MATERIAL);
         glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
