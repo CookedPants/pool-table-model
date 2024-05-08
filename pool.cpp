@@ -439,7 +439,7 @@ void updateBallPositions()
             }
             else
             {
-                balls[i].x = nextX; /
+                balls[i].x = nextX; 
             }
             // Vertical collision detection
             if (nextY < wallBottom)
